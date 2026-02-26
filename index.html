@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MenuLens · 菜單翻譯點餐</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #1a1208;
+    --paper: #fdf6e3;
+    --cream: #f5ecd7;
+    --amber: #c8841a;
+    --amber-light: #e8a93a;
+    --red: #b83232;
+    --red-light: #d44444;
+    --muted: #8a7a62;
+    --border: #d4c4a0;
+    --card: #fffdf7;
+    --shadow: rgba(50,30,10,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  }
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    letter-spacing: 0.02em;
+  }
+  .logo span { color: var(--amber-light); }
+  .cart-btn {
+    background: var(--amber);
+    border: none;
+    color: white;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 8px 16px;
+    border-radius: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+  }
+  .cart-btn:hover { background: var(--amber-light); }
+  .cart-badge {
+    background: var(--red);
+    color: white;
+    border-radius: 50%;
+    width: 20px; height: 20px;
+    font-size: 0.7rem;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+  }
+
+  /* STEPPER */
+  .stepper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 20px 24px 0;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+  }
+  .step-circle {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: white;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: var(--muted);
+    transition: all 0.3s;
+  }
+  .step.active .step-circle { background: var(--amber); border-color: var(--amber); color: white; }
+  .step.done .step-circle { background: var(--ink); border-color: var(--ink); color: white; }
+  .step-label { font-size: 0.7rem; color: var(--muted); text-align: center; }
+  .step.active .step-label { color: var(--amber); font-weight: 600; }
+  .step-line { flex: 1; height: 2px; background: var(--border); margin-bottom: 16px; }
+  .step-line.done { background: var(--ink); }
+
+  /* MAIN */
+  main { max-width: 700px; margin: 0 auto; padding: 24px 16px 100px; }
+
+  /* CARDS */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 12px var(--shadow);
+  }
+  .card-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--ink);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+  }
+
+  /* LANGUAGE SELECT */
+  .lang-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .lang-option {
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+  }
+  .lang-option:hover { border-color: var(--amber); background: #fffbf0; }
+  .lang-option.selected { border-color: var(--amber); background: #fff8e6; font-weight: 600; }
+  .lang-flag { font-size: 1.3rem; }
+
+  /* CURRENCY */
+  .currency-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .currency-row label { font-size: 0.85rem; color: var(--muted); font-weight: 500; }
+  .currency-row select {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    background: white;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .rate-info {
+    font-size: 0.75rem;
+    color: var(--muted);
+    background: var(--cream);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  /* UPLOAD */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 14px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--amber); background: #fffbf0; }
+  .upload-icon { font-size: 2.5rem; margin-bottom: 10px; }
+  .upload-text { color: var(--muted); font-size: 0.9rem; }
+  .upload-text b { color: var(--amber); }
+  #file-input { display: none; }
+
+  /* PREVIEW IMG */
+  .preview-img {
+    width: 100%;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    max-height: 220px;
+    object-fit: cover;
+  }
+
+  /* ANALYZE BTN */
+  .btn-primary {
+    width: 100%;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.2s;
+    margin-top: 12px;
+  }
+  .btn-primary:hover { background: #2a2010; }
+  .btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+
+  /* LOADING */
+  .loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 30px;
+  }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--amber);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--muted); font-size: 0.9rem; }
+
+  /* MENU ITEMS */
+  .menu-section-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--amber);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 20px 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .menu-section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .menu-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--cream);
+  }
+  .menu-item:last-child { border-bottom: none; }
+  .item-info { flex: 1; }
+  .item-name-translated {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .item-name-original {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .item-price {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    min-width: 80px;
+  }
+  .price-original { font-size: 0.85rem; font-weight: 600; color: var(--ink); }
+  .price-converted { font-size: 0.72rem; color: var(--muted); }
+  .add-btn {
+    background: var(--amber);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 32px; height: 32px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 4px;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .add-btn:hover { background: var(--amber-light); transform: scale(1.1); }
+  .added-badge {
+    font-size: 0.72rem;
+    background: var(--ink);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-top: 4px;
+    text-align: center;
+  }
+
+  /* CART PANEL */
+  .cart-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20,12,4,0.55);
+    z-index: 200;
+    display: none;
+  }
+  .cart-overlay.open { display: block; }
+  .cart-panel {
+    position: fixed;
+    right: -100%;
+    top: 0; bottom: 0;
+    width: min(420px, 100vw);
+    background: var(--paper);
+    z-index: 201;
+    transition: right 0.35s cubic-bezier(0.4,0,0.2,1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: -4px 0 30px rgba(0,0,0,0.2);
+  }
+  .cart-panel.open { right: 0; }
+  .cart-header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cart-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+  }
+  .close-btn {
+    background: none; border: none;
+    color: var(--paper);
+    font-size: 1.4rem;
+    cursor: pointer;
+    padding: 4px;
+  }
+  .cart-body { flex: 1; overflow-y: auto; padding: 16px; }
+  .cart-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .cart-item-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .cart-item-translated {
+    font-family: 'Noto Serif TC', serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+  .cart-item-original {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+  .cart-item-price {
+    text-align: right;
+    font-weight: 600;
+  }
+  .cart-item-price .converted { font-size: 0.75rem; color: var(--muted); }
+  .cart-item-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .qty-btn {
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    width: 28px; height: 28px;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .qty-btn:hover { background: var(--border); }
+  .qty-display { font-weight: 600; font-size: 0.9rem; min-width: 20px; text-align: center; }
+  .remove-btn {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--red);
+    font-size: 0.8rem;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  /* CART FOOTER */
+  .cart-footer {
+    padding: 16px;
+    border-top: 2px solid var(--border);
+    background: var(--cream);
+  }
+  .totals-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+  }
+  .totals-row.grand {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .show-order-btn {
+    width: 100%;
+    background: var(--red);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 13px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 12px;
+    transition: background 0.2s;
+  }
+  .show-order-btn:hover { background: var(--red-light); }
+
+  /* ORDER SHEET */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20,12,4,0.65);
+    z-index: 300;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .order-sheet {
+    background: var(--card);
+    border-radius: 20px 20px 0 0;
+    width: min(560px, 100vw);
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 24px;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.2);
+  }
+  .order-sheet h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    margin-bottom: 6px;
+    text-align: center;
+  }
+  .order-sheet .subtitle {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.8rem;
+    margin-bottom: 20px;
+  }
+  .order-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--border);
+    gap: 12px;
+  }
+  .order-line:last-of-type { border-bottom: none; }
+  .order-name-block { flex: 1; }
+  .order-translated { font-weight: 600; font-size: 0.95rem; }
+  .order-original { font-size: 0.78rem; color: var(--muted); }
+  .order-price { font-weight: 600; white-space: nowrap; }
+  .order-total-block {
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 12px;
+    padding: 16px;
+    margin: 16px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .order-total-block .label { font-size: 0.85rem; opacity: 0.7; }
+  .order-total-block .amount { font-family: 'Playfair Display', serif; font-size: 1.5rem; }
+  .order-total-block .converted { font-size: 0.8rem; opacity: 0.6; margin-top: 2px; }
+  .copy-btn {
+    width: 100%;
+    background: var(--amber);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 13px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    margin-bottom: 10px;
+    transition: background 0.2s;
+  }
+  .copy-btn:hover { background: var(--amber-light); }
+  .close-order-btn {
+    width: 100%;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: var(--muted);
+  }
+
+  /* NOTICE */
+  .notice {
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--amber);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+
+  /* STEP NAV */
+  .step-nav { display: flex; gap: 10px; margin-top: 12px; }
+  .btn-secondary {
+    flex: 1;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 13px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--ink);
+  }
+  .btn-secondary:hover { background: var(--cream); }
+
+  @media (max-width: 480px) {
+    .lang-grid { grid-template-columns: 1fr 1fr; }
+    main { padding: 16px 12px 100px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Menu<span>Lens</span> 🍽</div>
+  <button class="cart-btn" onclick="openCart()">
+    🛒 購物車
+    <span class="cart-badge" id="cart-count">0</span>
+  </button>
+</header>
+
+<!-- Stepper -->
+<div class="stepper">
+  <div class="step active" id="step1-dot">
+    <div class="step-circle">1</div>
+    <div class="step-label">設定語言</div>
+  </div>
+  <div class="step-line" id="line1"></div>
+  <div class="step" id="step2-dot">
+    <div class="step-circle">2</div>
+    <div class="step-label">上傳菜單</div>
+  </div>
+  <div class="step-line" id="line2"></div>
+  <div class="step" id="step3-dot">
+    <div class="step-circle">3</div>
+    <div class="step-label">選餐點餐</div>
+  </div>
+</div>
+
+<main id="main-content"></main>
+
+<!-- Cart Panel -->
+<div class="cart-overlay" id="cart-overlay" onclick="closeCart()"></div>
+<div class="cart-panel" id="cart-panel">
+  <div class="cart-header">
+    <h2>🛒 我的訂單</h2>
+    <button class="close-btn" onclick="closeCart()">✕</button>
+  </div>
+  <div class="cart-body" id="cart-body"></div>
+  <div class="cart-footer" id="cart-footer"></div>
+</div>
+
+<!-- Order Sheet Modal -->
+<div class="modal-overlay" id="order-modal">
+  <div class="order-sheet" id="order-sheet-content"></div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────
+const state = {
+  step: 1,
+  targetLang: 'zh-TW',
+  targetCurrency: 'TWD',
+  menuCurrency: 'JPY',
+  exchangeRates: {},
+  imageFile: null,
+  imageDataUrl: null,
+  menuItems: [],
+  cart: {},
+};
+
+const LANGUAGES = [
+  { code: 'zh-TW', label: '繁體中文', flag: '🇹🇼' },
+  { code: 'en',    label: 'English',  flag: '🇺🇸' },
+  { code: 'ko',    label: '한국어',   flag: '🇰🇷' },
+  { code: 'fr',    label: 'Français', flag: '🇫🇷' },
+  { code: 'es',    label: 'Español',  flag: '🇪🇸' },
+  { code: 'th',    label: 'ไทย',      flag: '🇹🇭' },
+  { code: 'tl',    label: 'Filipino', flag: '🇵🇭' },
+  { code: 'vi',    label: 'Tiếng Việt', flag: '🇻🇳' },
+  { code: 'ja',    label: '日本語',   flag: '🇯🇵' },
+  { code: 'zh-CN', label: '简体中文', flag: '🇨🇳' },
+];
+
+const CURRENCIES = ['TWD','USD','EUR','KRW','JPY','THB','VND','HKD','GBP','SGD'];
+
+// ─── RATES ───────────────────────────────────────────────
+async function fetchRates() {
+  try {
+    const r = await fetch('https://open.er-api.com/v6/latest/JPY');
+    const d = await r.json();
+    if (d.result === 'success') {
+      state.exchangeRates = d.rates;
+      state.exchangeRates['JPY'] = 1;
+      renderMain();
+    }
+  } catch(e) {
+    // fallback static rates from JPY
+    state.exchangeRates = {JPY:1,TWD:0.204,USD:0.0066,EUR:0.0061,KRW:8.95,THB:0.232,VND:165,HKD:0.052,GBP:0.0053,SGD:0.009};
+    renderMain();
+  }
+}
+
+function convertPrice(amount, fromCur, toCur) {
+  if (!state.exchangeRates[toCur] || !state.exchangeRates[fromCur]) return null;
+  const inJPY = fromCur === 'JPY' ? amount : amount / state.exchangeRates[fromCur];
+  return Math.round(inJPY * state.exchangeRates[toCur]);
+}
+
+// ─── RENDER ──────────────────────────────────────────────
+function renderMain() {
+  const el = document.getElementById('main-content');
+  // Update stepper
+  for (let i = 1; i <= 3; i++) {
+    const dot = document.getElementById(`step${i}-dot`);
+    dot.className = 'step' + (i < state.step ? ' done' : i === state.step ? ' active' : '');
+  }
+  document.getElementById('line1').className = 'step-line' + (state.step > 1 ? ' done' : '');
+  document.getElementById('line2').className = 'step-line' + (state.step > 2 ? ' done' : '');
+
+  if (state.step === 1) el.innerHTML = renderStep1();
+  else if (state.step === 2) el.innerHTML = renderStep2();
+  else el.innerHTML = renderStep3();
+}
+
+function renderStep1() {
+  const rateText = state.exchangeRates[state.targetCurrency]
+    ? `1 JPY ≈ ${state.exchangeRates[state.targetCurrency].toFixed(state.targetCurrency==='VND'?0:3)} ${state.targetCurrency}`
+    : '匯率載入中…';
+
+  return `
+  <div class="card">
+    <div class="card-title">🌐 選擇翻譯目標語言</div>
+    <div class="lang-grid">
+      ${LANGUAGES.map(l => `
+        <div class="lang-option ${state.targetLang===l.code?'selected':''}" onclick="selectLang('${l.code}')">
+          <span class="lang-flag">${l.flag}</span>
+          <span>${l.label}</span>
+        </div>
+      `).join('')}
+    </div>
+    <div class="currency-row">
+      <label>💰 我的貨幣</label>
+      <select onchange="selectCurrency(this.value)">
+        ${CURRENCIES.map(c=>`<option value="${c}" ${state.targetCurrency===c?'selected':''}>${c}</option>`).join('')}
+      </select>
+      <span class="rate-info">${rateText}</span>
+    </div>
+  </div>
+  <button class="btn-primary" onclick="goStep(2)">下一步：上傳菜單 →</button>
+  `;
+}
+
+function renderStep2() {
+  return `
+  <div class="notice">📸 請上傳餐廳菜單照片，系統將自動辨識語言並翻譯成您選擇的語言。</div>
+  <div class="card">
+    <div class="card-title">📷 上傳菜單照片</div>
+    ${state.imageDataUrl ? `<img src="${state.imageDataUrl}" class="preview-img" />` : ''}
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()" 
+         ondragover="event.preventDefault();this.classList.add('drag')" 
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleDrop(event)">
+      <div class="upload-icon">📂</div>
+      <div class="upload-text">${state.imageDataUrl ? '點此<b>更換圖片</b>' : '點此<b>選擇圖片</b>或拖曳至此'}</div>
+      <div class="upload-text" style="font-size:0.75rem;margin-top:6px">支援 JPG、PNG、WEBP</div>
+    </div>
+    <input type="file" id="file-input" accept="image/*" onchange="handleFile(this)" />
+    <button class="btn-primary" ${!state.imageDataUrl?'disabled':''} onclick="analyzeMenu()" id="analyze-btn">
+      ✨ 分析並翻譯菜單
+    </button>
+  </div>
+  <button class="btn-secondary" onclick="goStep(1)">← 返回</button>
+  `;
+}
+
+function renderStep3() {
+  if (!state.menuItems.length) {
+    return `<div class="empty-state"><div class="empty-icon">🍽</div><p>沒有菜單資料</p></div>`;
+  }
+  const rate = state.exchangeRates[state.targetCurrency];
+  let sections = {};
+  state.menuItems.forEach(item => {
+    const s = item.section || '菜單';
+    if (!sections[s]) sections[s] = [];
+    sections[s].push(item);
+  });
+
+  let html = `<div class="notice">💡 點 <b>＋</b> 加入購物車，也可以加入多份</div>`;
+  Object.entries(sections).forEach(([sec, items]) => {
+    html += `<div class="menu-section-title">${sec}</div>`;
+    items.forEach((item, idx) => {
+      const globalIdx = state.menuItems.indexOf(item);
+      const cartQty = state.cart[globalIdx]?.qty || 0;
+      const converted = rate ? convertPrice(item.price, item.currency || 'JPY', state.targetCurrency) : null;
+      html += `
+      <div class="menu-item">
+        <div class="item-info">
+          <div class="item-name-translated">${item.translatedName}</div>
+          <div class="item-name-original">${item.originalName}</div>
+        </div>
+        <div class="item-price">
+          <div class="price-original">¥${item.price}</div>
+          ${converted ? `<div class="price-converted">≈ ${converted} ${state.targetCurrency}</div>` : ''}
+          ${cartQty > 0 ? `<div class="added-badge">已加 ${cartQty}</div>` : ''}
+        </div>
+        <button class="add-btn" onclick="addToCart(${globalIdx})">＋</button>
+      </div>`;
+    });
+  });
+  html += `<button class="btn-secondary" onclick="goStep(2)" style="margin-top:16px">← 重新上傳</button>`;
+  return html;
+}
+
+// ─── ACTIONS ─────────────────────────────────────────────
+function selectLang(code) { state.targetLang = code; renderMain(); }
+function selectCurrency(c) { state.targetCurrency = c; renderMain(); renderCart(); }
+function goStep(n) { state.step = n; renderMain(); window.scrollTo(0,0); }
+
+function handleFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  state.imageFile = file;
+  const reader = new FileReader();
+  reader.onload = e => { state.imageDataUrl = e.target.result; renderMain(); };
+  reader.readAsDataURL(file);
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  state.imageFile = file;
+  const reader = new FileReader();
+  reader.onload = ev => { state.imageDataUrl = ev.target.result; renderMain(); };
+  reader.readAsDataURL(file);
+}
+
+async function analyzeMenu() {
+  const el = document.getElementById('main-content');
+  el.innerHTML = `<div class="card"><div class="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">🔍 正在辨識菜單語言並翻譯…<br><small>這需要約 10-20 秒</small></div>
+  </div></div>`;
+
+  const langName = LANGUAGES.find(l => l.code === state.targetLang)?.label || state.targetLang;
+
+  // Convert image to base64 (strip prefix)
+  const base64 = state.imageDataUrl.split(',')[1];
+  const mediaType = state.imageFile?.type || 'image/jpeg';
+
+  const prompt = `You are a menu translation assistant. Analyze this menu image and extract all dishes.
+
+For each dish, return a JSON array (and ONLY that array, no markdown, no explanation) with objects:
+{
+  "section": "section name in ${langName} (e.g. 主食, 飲品, etc.)",
+  "originalName": "original text from menu",
+  "translatedName": "translated name in ${langName}",
+  "price": number (just the number, e.g. 550),
+  "currency": "JPY" (detect from menu symbols: ¥=JPY, $=USD, NT$=TWD, etc.)
+}
+
+Detect the source language automatically from the image.
+Translate ALL dish names to ${langName}.
+If section cannot be determined, use "菜單" as default.
+Return ONLY valid JSON array.`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+            { type: 'text', text: prompt }
+          ]
+        }]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.map(c => c.text || '').join('');
+    // Parse JSON - strip fences if any
+    const clean = text.replace(/```json|```/g, '').trim();
+    const items = JSON.parse(clean);
+    if (!Array.isArray(items) || !items.length) throw new Error('no items');
+    state.menuItems = items;
+    state.step = 3;
+    renderMain();
+  } catch(e) {
+    console.error(e);
+    el.innerHTML = `<div class="card">
+      <div style="text-align:center;padding:20px;color:var(--red)">
+        <div style="font-size:2rem">⚠️</div>
+        <p style="margin:10px 0">無法辨識菜單，請確認圖片清晰可讀。</p>
+        <p style="font-size:0.8rem;color:var(--muted)">${e.message}</p>
+      </div>
+      <button class="btn-secondary" onclick="goStep(2)">← 返回重試</button>
+    </div>`;
+  }
+}
+
+// ─── CART ────────────────────────────────────────────────
+function addToCart(idx) {
+  if (!state.cart[idx]) {
+    state.cart[idx] = { ...state.menuItems[idx], qty: 0 };
+  }
+  state.cart[idx].qty++;
+  updateCartCount();
+  renderMain();
+  renderCart();
+}
+
+function changeQty(idx, delta) {
+  if (!state.cart[idx]) return;
+  state.cart[idx].qty += delta;
+  if (state.cart[idx].qty <= 0) delete state.cart[idx];
+  updateCartCount();
+  renderMain();
+  renderCart();
+}
+
+function removeFromCart(idx) {
+  delete state.cart[idx];
+  updateCartCount();
+  renderMain();
+  renderCart();
+}
+
+function updateCartCount() {
+  const total = Object.values(state.cart).reduce((s, i) => s + i.qty, 0);
+  document.getElementById('cart-count').textContent = total;
+}
+
+function openCart() {
+  document.getElementById('cart-overlay').classList.add('open');
+  document.getElementById('cart-panel').classList.add('open');
+  renderCart();
+}
+
+function closeCart() {
+  document.getElementById('cart-overlay').classList.remove('open');
+  document.getElementById('cart-panel').classList.remove('open');
+}
+
+function renderCart() {
+  const body = document.getElementById('cart-body');
+  const footer = document.getElementById('cart-footer');
+  const items = Object.entries(state.cart);
+
+  if (!items.length) {
+    body.innerHTML = `<div class="empty-state"><div class="empty-icon">🛒</div><p>購物車是空的</p></div>`;
+    footer.innerHTML = '';
+    return;
+  }
+
+  let totalOriginal = 0;
+  let origCur = 'JPY';
+  body.innerHTML = items.map(([idx, item]) => {
+    const converted = convertPrice(item.price, item.currency || 'JPY', state.targetCurrency);
+    totalOriginal += item.price * item.qty;
+    origCur = item.currency || 'JPY';
+    return `
+    <div class="cart-item">
+      <div class="cart-item-top">
+        <div>
+          <div class="cart-item-translated">${item.translatedName}</div>
+          <div class="cart-item-original">${item.originalName}</div>
+        </div>
+        <div class="cart-item-price">
+          <div>${origCur === 'JPY' ? '¥' : ''}${item.price * item.qty}</div>
+          ${converted ? `<div class="converted">≈ ${converted * item.qty} ${state.targetCurrency}</div>` : ''}
+        </div>
+      </div>
+      <div class="cart-item-controls">
+        <button class="qty-btn" onclick="changeQty(${idx},-1)">－</button>
+        <span class="qty-display">${item.qty}</span>
+        <button class="qty-btn" onclick="changeQty(${idx},1)">＋</button>
+        <button class="remove-btn" onclick="removeFromCart(${idx})">移除</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  const totalConverted = convertPrice(totalOriginal, origCur, state.targetCurrency);
+  footer.innerHTML = `
+  <div class="totals-row"><span>小計 (${origCur})</span><span>${origCur==='JPY'?'¥':''}${totalOriginal}</span></div>
+  ${totalConverted ? `<div class="totals-row"><span>約合 ${state.targetCurrency}</span><span>≈ ${totalConverted}</span></div>` : ''}
+  <div class="totals-row grand"><span>合計</span><span>${origCur==='JPY'?'¥':''}${totalOriginal}</span></div>
+  <button class="show-order-btn" onclick="showOrderSheet()">📋 顯示點餐清單（給店家看）</button>
+  `;
+}
+
+// ─── ORDER SHEET ─────────────────────────────────────────
+function showOrderSheet() {
+  const items = Object.entries(state.cart);
+  let totalOrig = 0;
+  let origCur = 'JPY';
+  const langLabel = LANGUAGES.find(l => l.code === state.targetLang)?.label || '';
+
+  const lines = items.map(([idx, item]) => {
+    totalOrig += item.price * item.qty;
+    origCur = item.currency || 'JPY';
+    return `
+    <div class="order-line">
+      <div class="order-name-block">
+        <div class="order-translated">${item.qty > 1 ? item.qty + '× ' : ''}${item.originalName}</div>
+        <div class="order-original">${item.translatedName}</div>
+      </div>
+      <div class="order-price">${origCur==='JPY'?'¥':''}${item.price * item.qty}</div>
+    </div>`;
+  }).join('');
+
+  const converted = convertPrice(totalOrig, origCur, state.targetCurrency);
+
+  document.getElementById('order-sheet-content').innerHTML = `
+    <h2>📋 點餐清單</h2>
+    <div class="subtitle">原文供店家確認 · 譯文 (${langLabel}) 供您參考</div>
+    ${lines}
+    <div class="order-total-block">
+      <div>
+        <div class="label">合計</div>
+        <div class="amount">${origCur==='JPY'?'¥':''}${totalOrig}</div>
+        ${converted ? `<div class="converted">≈ ${converted} ${state.targetCurrency}</div>` : ''}
+      </div>
+      <div style="font-size:2rem">🧾</div>
+    </div>
+    <button class="copy-btn" onclick="copyOrder()">📋 複製清單文字</button>
+    <button class="close-order-btn" onclick="closeOrderSheet()">關閉</button>
+  `;
+  document.getElementById('order-modal').classList.add('open');
+}
+
+function closeOrderSheet() {
+  document.getElementById('order-modal').classList.remove('open');
+}
+
+function copyOrder() {
+  const items = Object.values(state.cart);
+  let text = '【點餐清單】\n';
+  let total = 0;
+  items.forEach(item => {
+    text += `${item.qty}× ${item.originalName}（${item.translatedName}）¥${item.price * item.qty}\n`;
+    total += item.price * item.qty;
+  });
+  text += `\n合計：¥${total}`;
+  navigator.clipboard.writeText(text).then(() => alert('✅ 已複製到剪貼簿！'));
+}
+
+// ─── INIT ─────────────────────────────────────────────────
+fetchRates();
+renderMain();
+</script>
+</body>
+</html>
