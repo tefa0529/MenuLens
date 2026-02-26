@@ -810,34 +810,33 @@ async function analyzeMenu() {
   </div></div>`;
 
   const langName = LANGUAGES.find(l => l.code === state.targetLang)?.label || state.targetLang;
-
-  // Convert image to base64 (strip prefix)
   const base64 = state.imageDataUrl.split(',')[1];
   const mediaType = state.imageFile?.type || 'image/jpeg';
 
-  const prompt = `You are a menu translation assistant. Analyze this menu image and extract all dishes.
+  const prompt = `You are a menu translation assistant. Look at this menu image carefully.
 
-For each dish, return a JSON array (and ONLY that array, no markdown, no explanation) with objects:
-{
-  "section": "section name in ${langName} (e.g. 主食, 飲品, etc.)",
-  "originalName": "original text from menu",
-  "translatedName": "translated name in ${langName}",
-  "price": number (just the number, e.g. 550),
-  "currency": "JPY" (detect from menu symbols: ¥=JPY, $=USD, NT$=TWD, etc.)
-}
+Extract every dish/item visible. Return ONLY a raw JSON array — no markdown fences, no explanation text before or after.
 
-Detect the source language automatically from the image.
-Translate ALL dish names to ${langName}.
-If section cannot be determined, use "菜單" as default.
-Return ONLY valid JSON array.`;
+Each element must follow this exact schema:
+{"section":"string","originalName":"string","translatedName":"string","price":number,"currency":"string"}
 
+Rules:
+- section: group name translated to ${langName}. If unclear use "菜單".
+- originalName: exact text from the menu image.
+- translatedName: dish name translated to ${langName}.
+- price: numeric value only (e.g. 550 not "¥550").
+- currency: detect from symbols (¥ or 円 → JPY, $ → USD, NT$ → TWD, ₩ → KRW).
+
+Start your response with [ and end with ]. Nothing else.`;
+
+  let rawText = '';
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
+        max_tokens: 3000,
         messages: [{
           role: 'user',
           content: [
@@ -847,24 +846,48 @@ Return ONLY valid JSON array.`;
         }]
       })
     });
+
     const data = await resp.json();
-    const text = data.content?.map(c => c.text || '').join('');
-    // Parse JSON - strip fences if any
-    const clean = text.replace(/```json|```/g, '').trim();
-    const items = JSON.parse(clean);
-    if (!Array.isArray(items) || !items.length) throw new Error('no items');
-    state.menuItems = items;
+
+    // Check for API-level errors
+    if (data.error) throw new Error(`API Error: ${data.error.message}`);
+
+    rawText = (data.content || []).map(c => c.text || '').join('').trim();
+
+    // Robust JSON extraction: find first [ ... ] block
+    const match = rawText.match(/\[[\s\S]*\]/);
+    if (!match) throw new Error(`No JSON array found in response`);
+
+    const items = JSON.parse(match[0]);
+    if (!Array.isArray(items) || !items.length) throw new Error('Parsed array is empty');
+
+    // Sanitize items
+    state.menuItems = items.map(item => ({
+      section: item.section || '菜單',
+      originalName: String(item.originalName || ''),
+      translatedName: String(item.translatedName || item.originalName || ''),
+      price: Number(item.price) || 0,
+      currency: String(item.currency || 'JPY'),
+    })).filter(item => item.originalName && item.price > 0);
+
+    if (!state.menuItems.length) throw new Error('No valid items after sanitization');
+
     state.step = 3;
     renderMain();
+
   } catch(e) {
-    console.error(e);
+    console.error('analyzeMenu error:', e, '\nRaw response:', rawText);
     el.innerHTML = `<div class="card">
       <div style="text-align:center;padding:20px;color:var(--red)">
         <div style="font-size:2rem">⚠️</div>
-        <p style="margin:10px 0">無法辨識菜單，請確認圖片清晰可讀。</p>
-        <p style="font-size:0.8rem;color:var(--muted)">${e.message}</p>
+        <p style="margin:10px 0;font-weight:600">辨識失敗，請重試</p>
+        <details style="text-align:left;margin:10px 0">
+          <summary style="cursor:pointer;font-size:0.8rem;color:var(--muted)">查看錯誤詳情</summary>
+          <pre style="font-size:0.72rem;color:var(--muted);margin-top:8px;white-space:pre-wrap;word-break:break-all;background:var(--cream);padding:8px;border-radius:6px">${e.message}\n\nRaw: ${rawText.slice(0,400)}</pre>
+        </details>
       </div>
-      <button class="btn-secondary" onclick="goStep(2)">← 返回重試</button>
+      <button class="btn-primary" onclick="analyzeMenu()">🔄 重新分析</button>
+      <button class="btn-secondary" style="margin-top:8px" onclick="goStep(2)">← 換張圖片</button>
     </div>`;
   }
 }
